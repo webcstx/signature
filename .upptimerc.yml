@@ -1,31 +1,33 @@
 # Change these first
-owner: upptime # Your GitHub organization or username, where this repository lives
-repo: upptime # The name of this repository
+owner: webcstx
+repo: signature
 
 sites:
-  - name: Google
-    url: https://www.google.com
-  - name: Wikipedia
-    url: https://en.wikipedia.org
-  - name: Hacker News
-    url: https://news.ycombinator.com
-  - name: Secret Site
-    url: $SECRET_SITE
+  - name: 4653.my-style.in
+    url: https://4653.my-style.in
+  - name: 660086.fwh.is
+    url: https://660086.fwh.is
+  - name: bbb.wuaze.com
+    url: https://bbb.wuaze.com
+  - name: note123tech.fwh.is
+    url: https://note123tech.fwh.is
+  - name: pi.wuaze.com
+    url: https://pi.wuaze.com
+  - name: vivo.fwh.is
+    url: https://vivo.fwh.is
+  - name: webcat.wuaze.com
+    url: https://webcat.wuaze.com
+  - name: zxc.iblogger.org
+    url: https://zxc.iblogger.org
 
 status-website:
-  # Add your custom domain name, or remove the `cname` line if you don't have a domain
-  # Uncomment the `baseUrl` line if you don't have a custom domain and add your repo name there
-  cname: demo.upptime.js.org
-  # baseUrl: /your-repo-name
+  cname: roor.us.ci
   logoUrl: https://raw.githubusercontent.com/upptime/upptime.js.org/master/static/img/icon.svg
-  name: Upptime
-  introTitle: "**Upptime** is the open-source uptime monitor and status page, powered entirely by GitHub."
-  introMessage: This is a sample status page which uses **real-time** data from our [GitHub repository](https://github.com/upptime/upptime). No server required — just GitHub Actions, Issues, and Pages. [**Get your own for free**](https://github.com/upptime/upptime)
+  name: 网站安全监控
+  introTitle: "**网站安全监控** - 实时检查网站是否安全在线"
+  introMessage: 基于 Upptime 的开源网站可用性监控系统
   navbar:
     - title: Status
       href: /
     - title: GitHub
       href: https://github.com/$OWNER/$REPO
-
-# Upptime also supports notifications, assigning issues, and more
-# See https://upptime.js.org/docs/configuration
