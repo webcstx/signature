@@ -3,22 +3,10 @@ owner: webcstx
 repo: signature
 
 sites:
-  - name: 4653.my-style.in
-    url: https://4653.my-style.in
-  - name: 660086.fwh.is
-    url: https://660086.fwh.is
-  - name: bbb.wuaze.com
-    url: https://bbb.wuaze.com
-  - name: note123tech.fwh.is
-    url: https://note123tech.fwh.is
-  - name: pi.wuaze.com
-    url: https://pi.wuaze.com
-  - name: vivo.fwh.is
-    url: https://vivo.fwh.is
-  - name: webcat.wuaze.com
-    url: https://webcat.wuaze.com
-  - name: zxc.iblogger.org
-    url: https://zxc.iblogger.org
+  - name: paopaoxnzj.xuu8t6.cn
+    url: https://paopaoxnzj.xuu8t6.cn
+  - name: paopao.xuu8t6.cn
+    url: https://paopao.xuu8t6.cn
 
 status-website:
   cname: roor.us.ci
