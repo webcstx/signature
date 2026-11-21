@@ -7,6 +7,8 @@ sites:
     url: https://paopaoxnzj.xuu8t6.cn
   - name: paopao.xuu8t6.cn
     url: https://paopao.xuu8t6.cn
+  - name: paopaoweb.xuu8t6.cn
+    url: https://paopaoweb.xuu8t6.cn
 
 status-website:
   cname: roor.us.ci
