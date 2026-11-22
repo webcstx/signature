@@ -45,6 +45,14 @@ _last_request = {}          # ip -> 上次请求时间戳
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 
+def _key_ok(request: Request) -> bool:
+    """访问密钥校验：Header X-Access-Key 或 ?key= 均可。未配置则放行。"""
+    if not config.ACCESS_KEY:
+        return True
+    given = request.headers.get("x-access-key") or request.query_params.get("key") or ""
+    return given.strip() == config.ACCESS_KEY
+
+
 def _client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
@@ -58,7 +66,9 @@ async def index():
 
 
 @app.get("/api/models")
-async def models():
+async def models(request: Request):
+    if not _key_ok(request):
+        return JSONResponse(status_code=401, content={"error": "访问密钥无效", "detail": "请带上 X-Access-Key 或 ?key="})
     data = []
     for pid, cfg in config.PROVIDERS.items():
         data.append({
@@ -77,6 +87,8 @@ async def models():
 
 @app.post("/api/chat")
 async def chat(request: Request):
+    if not _key_ok(request):
+        return JSONResponse(status_code=401, content={"error": "访问密钥无效", "detail": "请带上 X-Access-Key 或 ?key="})
     ip = _client_ip(request)
     now = time.time()
 

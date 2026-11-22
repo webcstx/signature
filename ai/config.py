@@ -13,6 +13,7 @@ except Exception:
     pass
 
 # ---------- 硬性限制 ----------
+ACCESS_KEY = os.environ.get("ACCESS_KEY", "").strip()   # 服务自己的访问密钥（门禁）
 MAX_CHARS = int(os.environ.get("MAX_CHARS", "40000"))   # 单次对话总字数上限
 MIN_INTERVAL_MS = int(os.environ.get("MIN_INTERVAL_MS", "1000"))  # 同一 IP 最小请求间隔
 

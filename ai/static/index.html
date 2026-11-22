@@ -63,6 +63,10 @@
   </header>
 
   <div class="tabs" id="tabs"></div>
+  <div style="display:flex;gap:8px;">
+    <input id="keyInput" placeholder="访问密钥（从 URL 的 ?key= 自动带入）"
+      style="flex:1;border:1px solid #dfe2e7;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;">
+  </div>
 
   <div class="panel">
     <div class="chat" id="chat">
@@ -89,9 +93,16 @@ const state = {
   history: [],
   maxChars: 40000,
   minInterval: 1000,
+  accessKey: '',
   lastSendAt: 0,
   busy: false
 };
+
+function keyHeaders(extra) {
+  const h = Object.assign({}, extra || {});
+  if (state.accessKey) h['X-Access-Key'] = state.accessKey;
+  return h;
+}
 
 const el = {
   tabs: document.getElementById('tabs'),
@@ -192,7 +203,7 @@ async function send() {
   try {
     const resp = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: keyHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ model: state.current, messages: history })
     });
     const data = await resp.json();
@@ -224,8 +235,21 @@ el.input.addEventListener('keydown', e => {
 });
 
 (async function init() {
+  const qs = new URLSearchParams(location.search).get('key');
+  state.accessKey = qs || localStorage.getItem('access_key') || '';
+  el.keyInput = document.getElementById('keyInput');
+  el.keyInput.value = state.accessKey;
+  el.keyInput.addEventListener('change', () => {
+    state.accessKey = el.keyInput.value.trim();
+    localStorage.setItem('access_key', state.accessKey);
+    initModels();
+  });
+  await initModels();
+})();
+
+async function initModels() {
   try {
-    const resp = await fetch('/api/models');
+    const resp = await fetch('/api/models', { headers: keyHeaders() });
     const data = await resp.json();
     state.models = data.models;
     state.maxChars = data.max_chars;
@@ -238,7 +262,7 @@ el.input.addEventListener('keydown', e => {
   } catch (e) {
     el.hint.textContent = '读取模型列表失败：' + e.message;
   }
-})();
+}
 </script>
 </body>
 </html>

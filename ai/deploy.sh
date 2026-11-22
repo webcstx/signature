@@ -34,6 +34,12 @@ if [ -z "${DEEPSEEK_API_KEY}" ]; then
   echo
 fi
 
+# 服务访问密钥：没配就自动生成一串
+if [ -z "${ACCESS_KEY}" ]; then
+  ACCESS_KEY=$(python3 -c "import secrets;print(secrets.token_hex(16))")
+  echo "[配置] 已自动生成访问密钥：${ACCESS_KEY}"
+fi
+
 # 写回 .env（已被 .gitignore 排除，不会进仓库）
 {
   echo "DOUBAO_API_KEY=${DOUBAO_API_KEY}"
@@ -42,6 +48,7 @@ fi
   echo "QWEN_MODEL=${QWEN_MODEL:-qwen-plus}"
   echo "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}"
   echo "DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-chat}"
+  echo "ACCESS_KEY=${ACCESS_KEY}"
   echo "MAX_CHARS=${MAX_CHARS:-40000}"
   echo "MIN_INTERVAL_MS=${MIN_INTERVAL_MS:-1000}"
   echo "PORT=${PORT:-8000}"
@@ -63,4 +70,5 @@ pip install -q -r requirements.txt
 # 3) 启动
 echo "[启动] 端口 ${PORT:-8000} / 字数上限 ${MAX_CHARS:-40000} / 间隔 ${MIN_INTERVAL_MS:-1000}ms"
 echo "[启动] 打开方式：端口面板把 ${PORT:-8000} 设为 Public"
+echo "[启动] 访问地址：https://<你的空间名>-${PORT:-8000}.app.github.dev/?key=${ACCESS_KEY}"
 exec python app.py
