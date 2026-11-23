@@ -52,5 +52,41 @@
     "timeMonth": 1647,
     "timeYear": 1647,
     "dailyMinutesDown": {}
+  },
+  {
+    "name": "Google",
+    "url": "https://www.google.com",
+    "icon": "https://icons.duckduckgo.com/ip3/www.google.com.ico",
+    "slug": "google",
+    "status": "up",
+    "uptime": "100.00%",
+    "uptimeDay": "100.00%",
+    "uptimeWeek": "100.00%",
+    "uptimeMonth": "100.00%",
+    "uptimeYear": "100.00%",
+    "time": 66,
+    "timeDay": 66,
+    "timeWeek": 66,
+    "timeMonth": 66,
+    "timeYear": 66,
+    "dailyMinutesDown": {}
+  },
+  {
+    "name": "网易",
+    "url": "https://www.163.com",
+    "icon": "https://icons.duckduckgo.com/ip3/www.163.com.ico",
+    "slug": "网易",
+    "status": "up",
+    "uptime": "100.00%",
+    "uptimeDay": "100.00%",
+    "uptimeWeek": "100.00%",
+    "uptimeMonth": "100.00%",
+    "uptimeYear": "100.00%",
+    "time": 1244,
+    "timeDay": 1244,
+    "timeWeek": 1244,
+    "timeMonth": 1244,
+    "timeYear": 1244,
+    "dailyMinutesDown": {}
   }
 ]
