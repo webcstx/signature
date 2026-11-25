@@ -6,10 +6,10 @@
 <title>监控管理后台</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:26px 14px 48px;background:#f5f6f8;color:#1f2430;font-size:14px;
+body{margin:0;padding:24px 14px 48px;background:#f5f6f8;color:#1f2430;font-size:14px;
 font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
 .wrap{max-width:620px;margin:0 auto}
-h1{font-size:20px;margin:0 0 14px;text-align:center}
+h1{font-size:20px;margin:0 0 16px;text-align:center}
 .card{background:#fff;border:1px solid #e6e9ef;border-radius:14px;padding:18px;margin-bottom:14px;
 box-shadow:0 1px 2px rgba(16,24,40,.04)}
 label{display:block;font-size:12px;color:#6f7684;margin:0 0 7px}
@@ -19,6 +19,8 @@ input:focus{border-color:#2f6bff;box-shadow:0 0 0 3px rgba(47,107,255,.12)}
 button{border:0;border-radius:10px;padding:12px 16px;font-size:14px;cursor:pointer;
 background:#eceff4;color:#1f2430;font-family:inherit}
 button.main{background:#2f6bff;color:#fff;width:100%}
+button.shut{background:#e5484d;color:#fff;width:100%;letter-spacing:2px}
+button:disabled{background:#c9ced8;cursor:default}
 button.mini{padding:7px 12px;font-size:12px;border-radius:8px}
 button.del{background:#fdecec;color:#c33}
 .row{display:flex;gap:8px;align-items:flex-end;margin-bottom:10px}
@@ -27,7 +29,17 @@ button.del{background:#fdecec;color:#c33}
 .ok{color:#0e8f6e}.bad{color:#c33}
 .hidden{display:none}
 .top{display:flex;justify-content:space-between;align-items:center;margin:0 0 14px}
-.note{font-size:11px;color:#98a2b3;text-align:center;line-height:1.8;margin-top:18px}
+.section{font-size:13px;color:#1f2430;font-weight:600;margin:0 0 10px}
+.mask{position:fixed;inset:0;background:rgba(15,17,21,.45);display:flex;align-items:center;
+justify-content:center;padding:20px;z-index:9}
+.mask.hidden{display:none}
+.dlg{width:100%;max-width:320px;background:#fff;border-radius:16px;padding:20px;text-align:left}
+.dlg h2{font-size:15px;margin:0 0 14px;font-weight:600}
+.dlg label{display:block;font-size:12px;color:#6f7684;margin:10px 0 6px}
+.acts{display:flex;gap:8px;margin-top:16px}
+.acts button{font-size:14px;padding:11px}
+.acts .cancel{background:#eceff4;color:#1f2430;flex:1}
+.acts .ok{background:#e5484d;color:#fff;flex:1}
 </style>
 </head>
 <body>
@@ -47,17 +59,38 @@ button.del{background:#fdecec;color:#c33}
       <div><button class="mini" onclick="addRow()">＋ 新增</button>
       <button class="mini" onclick="logout()">退出</button></div>
     </div>
-    <div class="card"><div id="rows"></div></div>
-    <button class="main" onclick="save()">保存并提交</button>
-    <div class="msg" id="msg"></div>
-  </div>
 
-  <p class="note">密码只保存在本机浏览器，不会上传。</p>
+    <div class="card">
+      <div id="rows"></div>
+      <div style="margin-top:14px"><button class="main" onclick="save()">保存并提交</button></div>
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="section">故障单</div>
+      <div class="msg" id="incState" style="margin-top:0">读取中…</div>
+      <div style="margin-top:10px"><button class="shut" id="incBtn" onclick="openClose()">关 闭</button></div>
+      <div class="msg" id="incMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div class="mask hidden" id="mask">
+  <div class="dlg">
+    <h2>确认关闭</h2>
+    <label>密码</label>
+    <input id="closePw" type="password" placeholder="输入密码" autocomplete="off">
+    <div class="msg bad" id="closeErr"></div>
+    <div class="acts">
+      <button class="cancel" onclick="shutDialog()">取消</button>
+      <button class="ok" onclick="doClose()">确认</button>
+    </div>
+  </div>
 </div>
 
 <script>
 var REPO = 'webcstx/signature', FILE = '.upptimerc.yml', BRANCH = 'master';
-var API = 'https://api.github.com/repos/' + REPO + '/contents/' + FILE;
+var CLOSE_PASS = '520214';
 var $ = function(id){ return document.getElementById(id); };
 var key = '';
 
@@ -67,12 +100,8 @@ function say(kind, text, el){
   m.textContent = text || '';
 }
 
-function enc(s){
-  return btoa(unescape(encodeURIComponent(s)));
-}
-function dec(s){
-  return decodeURIComponent(escape(atob(s.replace(/[\r\n\t ]/g, ''))));
-}
+function enc(s){ return btoa(unescape(encodeURIComponent(s))); }
+function dec(s){ return decodeURIComponent(escape(atob(s.replace(/[\r\n\t ]/g, '')))); }
 
 function headers(){
   return { 'Authorization': 'Bearer ' + key, 'Accept': 'application/vnd.github+json',
@@ -84,7 +113,6 @@ function gh(path, opts){
     .then(function(r){
       if (r.status === 401) throw new Error('密码错误或已失效');
       if (r.status === 404) throw new Error('没有这个仓库的权限');
-      if (r.status === 409) throw new Error('配置刚被别人改过，刷新后重试');
       return r.json().catch(function(){ return {}; }).then(function(d){
         if (!r.ok) throw new Error(d.message || ('HTTP ' + r.status));
         return d;
@@ -106,8 +134,7 @@ function addRow(name, url){
 }
 
 function count(){
-  var n = $('rows').querySelectorAll('.row').length;
-  $('count').textContent = n + ' 个站点';
+  $('count').textContent = $('rows').querySelectorAll('.row').length + ' 个站点';
 }
 
 function collect(){
@@ -150,27 +177,45 @@ function rebuild(p, sites){
 function load(){
   say('', '读取中…');
   gh('/repos/' + REPO + '/contents/' + FILE + '?ref=' + BRANCH).then(function(d){
-    var text = dec(d.content);
-    var p = parse(text);
+    var p = parse(dec(d.content));
     $('rows').innerHTML = '';
     p.sites.forEach(function(s){ addRow(s.name, s.url); });
     if (!p.sites.length) addRow();
     $('loginBox').classList.add('hidden');
     $('panel').classList.remove('hidden');
     say('', '');
-    window.__sha = d.sha;
+    loadIncidents();
   }).catch(function(e){
     say('bad', '读取失败：' + e.message);
   });
 }
 
+function loadIncidents(){
+  say('', '读取中…', 'incState');
+  fetch('https://api.github.com/repos/' + REPO + '/issues?state=open&per_page=100')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var list = (d || []).filter(function(x){
+        if (x.pull_request) return false;
+        var lb = (x.labels || []).map(function(l){ return l.name; });
+        return lb.indexOf('status') > -1;
+      });
+      $('incState').className = 'msg';
+      $('incState').textContent = list.length ? '当前有 ' + list.length + ' 张未关闭的故障单' : '当前没有未关闭的故障单';
+      $('incBtn').disabled = !list.length;
+    })
+    .catch(function(){
+      $('incState').textContent = '读取失败';
+      $('incBtn').disabled = true;
+    });
+}
+
 function login(){
   var pw = $('pass').value.trim();
   if (!pw){ say('bad', '请输入密码', 'loginMsg'); return; }
-  key = pw;
   say('', '验证中…', 'loginMsg');
+  key = pw;
   gh('/repos/' + REPO).then(function(){
-    localStorage.setItem('wc_key', pw);
     say('', '', 'loginMsg');
     load();
   }).catch(function(e){
@@ -184,39 +229,67 @@ function save(){
   if (!sites.length){ say('bad', '至少保留一个站点'); return; }
   for (var i = 0; i < sites.length; i++){
     if (!sites[i].name || !sites[i].url){ say('bad', '第 ' + (i+1) + ' 行没填完整'); return; }
-    if (!/^https?:\/\/[^\s]+$/.test(sites[i].url)){ say('bad', '第 ' + (i+1) + ' 行地址要以 http(s):// 开头'); return; }
+    if (!/^https?:\/\/[^\s]+/.test(sites[i].url)){ say('bad', '第 ' + (i+1) + ' 行地址要以 http(s):// 开头'); return; }
   }
   say('', '提交中…');
   gh('/repos/' + REPO + '/contents/' + FILE + '?ref=' + BRANCH).then(function(d){
-    window.__sha = d.sha;
     var next = rebuild(parse(dec(d.content)), sites);
     return gh('/repos/' + REPO + '/contents/' + FILE, {
       method: 'PUT',
       body: JSON.stringify({ message: '更新监控配置', content: enc(next), sha: d.sha, branch: BRANCH })
     });
   }).then(function(d){
-    window.__sha = (d.content && d.content.sha) || '';
     say('ok', '已保存，commit ' + String((d.commit && d.commit.sha) || '').slice(0, 7));
   }).catch(function(e){
     say('bad', '保存失败：' + e.message);
   });
 }
 
+function openClose(){
+  $('closeErr').textContent = '';
+  $('closePw').value = '';
+  $('mask').classList.remove('hidden');
+  setTimeout(function(){ $('closePw').focus(); }, 50);
+}
+
+function shutDialog(){ $('mask').classList.add('hidden'); }
+
+function doClose(){
+  var pw = $('closePw').value.trim();
+  if (pw !== CLOSE_PASS){ $('closeErr').textContent = '密码不对'; return; }
+  $('incBtn').disabled = true;
+  $('incState').textContent = '提交中…';
+  gh('/repos/' + REPO + '/issues?state=open&per_page=100').then(function(d){
+    var list = (d || []).filter(function(x){
+      if (x.pull_request) return false;
+      var lb = (x.labels || []).map(function(l){ return l.name; });
+      return lb.indexOf('status') > -1;
+    });
+    if (!list.length) return 0;
+    return Promise.all(list.map(function(x){
+      return gh('/repos/' + REPO + '/issues/' + x.number, {
+        method: 'PATCH',
+        body: JSON.stringify({ state: 'closed', state_reason: 'not_planned' })
+      }).then(function(){ return 1; }).catch(function(){ return 0; });
+    })).then(function(a){ return a.reduce(function(p, c){ return p + c; }, 0); });
+  }).then(function(n){
+    shutDialog();
+    say('ok', n ? '已关闭 ' + n + ' 张故障单' : '没有需要关闭的故障单', 'incMsg');
+    loadIncidents();
+  }).catch(function(e){
+    shutDialog();
+    say('bad', '关闭失败：' + e.message, 'incMsg');
+    loadIncidents();
+  });
+}
+
 function logout(){
-  localStorage.removeItem('wc_key');
   key = '';
   $('panel').classList.add('hidden');
   $('loginBox').classList.remove('hidden');
   $('pass').value = '';
   say('', '', 'loginMsg');
 }
-
-(function(){
-  var saved = localStorage.getItem('wc_key');
-  if (!saved) return;
-  key = saved;
-  gh('/repos/' + REPO).then(function(){ load(); }).catch(function(){ logout(); });
-})();
 </script>
 </body>
 </html>
