@@ -16,7 +16,6 @@ h1{font-size:17px;margin:0 0 6px;font-weight:600}
 button{width:100%;border:0;border-radius:12px;padding:14px;font-size:16px;cursor:pointer;
 background:#e5484d;color:#fff;font-family:inherit;letter-spacing:2px}
 button:disabled{background:#c9ced8;cursor:default}
-button.plain{background:none;color:#98a2b3;font-size:11.5px;letter-spacing:0;padding:8px;margin-top:10px}
 .mask{position:fixed;inset:0;background:rgba(15,17,21,.45);display:flex;align-items:center;
 justify-content:center;padding:20px;z-index:9}
 .mask.hidden{display:none}
@@ -31,7 +30,6 @@ outline:none;font-family:inherit;color:#1f2430}
 .acts .cancel{background:#eceff4;color:#1f2430}
 .acts .ok{background:#2f6bff}
 .err{font-size:12px;color:#c33;margin-top:10px;min-height:16px}
-.hint{font-size:11px;color:#98a2b3;line-height:1.7;margin-top:12px}
 </style>
 </head>
 <body>
@@ -39,17 +37,13 @@ outline:none;font-family:inherit;color:#1f2430}
   <h1>故障单</h1>
   <p class="state" id="state">读取中…</p>
   <button id="btn" onclick="open_()">关 闭</button>
-  <button class="plain hidden" id="clear" onclick="clearKey()">清除本机密钥</button>
-  <div class="hint">关闭只会把故障单标记为已关闭，不会删掉它。</div>
 </div>
 
 <div class="mask hidden" id="mask">
   <div class="dlg">
     <h2>确认关闭</h2>
-    <div id="keyWrap">
-      <label>维护密钥</label>
-      <input id="keyIn" type="password" placeholder="首次使用需填写" autocomplete="off">
-    </div>
+    <label>密钥</label>
+    <input id="keyIn" type="password" placeholder="输入密钥" autocomplete="off">
     <label>密码</label>
     <input id="pwIn" type="password" placeholder="输入密码" autocomplete="off">
     <div class="err" id="err"></div>
@@ -64,9 +58,6 @@ outline:none;font-family:inherit;color:#1f2430}
 var REPO = 'webcstx/signature';
 var PASS = '520214';
 var $ = function(i){ return document.getElementById(i); };
-var count = 0;
-
-function key(){ return localStorage.getItem('wc_fix_key') || ''; }
 
 function say(text){ $('state').textContent = text; }
 
@@ -79,37 +70,27 @@ function load(){
         var labels = (x.labels || []).map(function(l){ return l.name; });
         return labels.indexOf('status') > -1;
       });
-      count = list.length;
-      say(count ? '当前有 ' + count + ' 张未关闭的故障单' : '当前没有未关闭的故障单');
-      $('btn').disabled = !count;
-      $('clear').classList.toggle('hidden', !key());
+      say(list.length ? '当前有 ' + list.length + ' 张未关闭的故障单' : '当前没有未关闭的故障单');
+      $('btn').disabled = !list.length;
     })
     .catch(function(){ say('读取失败，稍后重试'); });
 }
 
 function open_(){
   $('err').textContent = '';
-  $('keyWrap').style.display = key() ? 'none' : 'block';
   $('keyIn').value = '';
   $('pwIn').value = '';
   $('mask').classList.remove('hidden');
-  setTimeout(function(){ $('pwIn').focus(); }, 50);
+  setTimeout(function(){ $('keyIn').focus(); }, 50);
 }
 
 function close_(){ $('mask').classList.add('hidden'); }
 
-function clearKey(){
-  localStorage.removeItem('wc_fix_key');
-  $('clear').classList.add('hidden');
-  $('err').textContent = '';
-}
-
 function submit(){
+  var k = $('keyIn').value.trim();
   var pw = $('pwIn').value.trim();
-  var k = key() || $('keyIn').value.trim();
-  if (!k){ $('err').textContent = '需要先填维护密钥'; return; }
+  if (!k){ $('err').textContent = '需要填写密钥'; return; }
   if (pw !== PASS){ $('err').textContent = '密码不对'; return; }
-  localStorage.setItem('wc_fix_key', k);
   $('btn').disabled = true;
   say('提交中…');
 
@@ -139,7 +120,6 @@ function submit(){
     .then(function(n){
       close_();
       say(n ? '已关闭 ' + n + ' 张故障单' : '没有需要关闭的故障单');
-      $('clear').classList.toggle('hidden', !key());
       load();
     })
     .catch(function(e){
