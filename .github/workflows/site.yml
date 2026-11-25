@@ -57,11 +57,16 @@ jobs:
           command: "site"
         env:
           GH_PAT: ${{ steps.app_token.outputs.token || secrets.GH_PAT || github.token }}
+      - name: Copy admin panel into site
+        run: |
+          mkdir -p site/status-page/__sapper__/export/admin
+          cp -r admin/. site/status-page/__sapper__/export/admin/
       - uses: peaceiris/actions-gh-pages@v4
         name: GitHub Pages Deploy
         with:
           github_token: ${{ steps.app_token.outputs.token || secrets.GH_PAT || github.token }}
           publish_dir: "site/status-page/__sapper__/export/"
           force_orphan: "false"
+          keep_files: "true"
           user_name: "Upptime Bot"
           user_email: "73812536+upptime-bot@users.noreply.github.com"
