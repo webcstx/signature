@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>监控管理后台</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:24px 14px 48px;background:#f5f6f8;color:#1f2430;font-size:14px;
+font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:640px;margin:0 auto}
+h1{font-size:20px;margin:0 0 6px}
+.sub{font-size:12.5px;color:#6f7684;line-height:1.8;margin:0 0 18px}
+.card{background:#fff;border:1px solid #e6e9ef;border-radius:14px;padding:18px;margin-bottom:14px;
+box-shadow:0 1px 2px rgba(16,24,40,.04)}
+label{display:block;font-size:12px;color:#6f7684;margin:10px 0 6px}
+input{width:100%;border:1px solid #dfe4ec;border-radius:9px;padding:10px 12px;font-size:14px;
+background:#fff;color:#1f2430;outline:none;font-family:inherit}
+input:focus{border-color:#2f6bff;box-shadow:0 0 0 3px rgba(47,107,255,.12)}
+button{border:0;border-radius:9px;padding:10px 16px;font-size:13.5px;cursor:pointer;
+background:#eceff4;color:#1f2430;font-family:inherit}
+button.main{background:#2f6bff;color:#fff;width:100%}
+button.small{padding:7px 12px;font-size:12px}
+button.del{background:#fdecec;color:#c33}
+.row{display:flex;gap:8px;align-items:flex-end;margin-bottom:10px}
+.row>div{flex:1}.row>div:last-child{flex:0 0 auto}
+.msg{font-size:12.5px;line-height:1.8;margin-top:10px;min-height:18px}
+.ok{color:#0e8f6e}.bad{color:#c33}
+.hidden{display:none}
+.hint{font-size:11.5px;color:#8b93a1;line-height:1.75;margin-top:8px}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>监控管理后台</h1>
+  <p class="sub">修改监控站点、状态页标题与域名。保存后提交到 GitHub，自动重新检测。</p>
+
+  <div class="card" id="loginBox">
+    <label>管理口令</label>
+    <input id="pass" type="password" placeholder="输入口令" autocomplete="off">
+    <div id="setupBox" class="hidden">
+      <label>后台接口地址（首次使用需填，填一次即可）</label>
+      <input id="apiUrl" placeholder="https://xxxx.yyyy.workers.dev" autocapitalize="off">
+      <div class="hint">这是你部署的那个 Cloudflare Worker 地址，不以斜杠结尾。</div>
+    </div>
+    <div style="margin-top:14px"><button class="main" onclick="login()">验证并进入</button></div>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div id="panel" class="hidden">
+    <div class="card">
+      <div class="head">
+        <label style="margin:0">监控站点</label>
+        <div><button class="small" onclick="addRow()">＋ 新增</button>
+        <button class="small" onclick="logout()">退出</button></div>
+      </div>
+      <div id="rows" style="margin-top:14px"></div>
+      <div class="hint">删除站点后，它遗留的故障工单不会自动关闭，需去 GitHub Issues 手动关闭。</div>
+    </div>
+
+    <div class="card">
+      <label>状态页标题</label>
+      <input id="siteName" placeholder="例如 网站安全监控">
+      <label>自定义域名</label>
+      <input id="siteCname" placeholder="例如 roor.us.ci" autocapitalize="off">
+      <div class="hint">改名只影响状态页顶部显示的文字；域名要与 GitHub Pages 里设置的一致，改错会导致打不开。</div>
+    </div>
+
+    <button class="main" onclick="save()">保存并提交</button>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+
+<script>
+var CFG = { api: "" };            // ← 部署 Worker 后把地址填在这里，例如 "https://xxx.workers.dev"
+var $ = function(id){ return document.getElementById(id); };
+var key = "";
+
+function apiBase(){
+  return (CFG.api || localStorage.getItem('wc_api') || "").replace(/\/+$/, "");
+}
+
+function say(kind, text, el){
+  var m = $(el || 'msg');
+  m.className = 'msg ' + (kind || '');
+  m.textContent = text || '';
+}
+
+function addRow(name, url){
+  var d = document.createElement('div');
+  d.className = 'row';
+  d.innerHTML = '<div><label>显示名称</label><input class="nm" placeholder="例如 paopao 主站"></div>' +
+                '<div><label>监控地址</label><input class="ur" placeholder="https://example.com"></div>' +
+                '<div><button class="small del">删</button></div>';
+  d.querySelector('.nm').value = name || '';
+  d.querySelector('.ur').value = url || '';
+  d.querySelector('.del').onclick = function(){ d.remove(); };
+  $('rows').appendChild(d);
+}
+
+function collect(){
+  var out = [], rows = $('rows').querySelectorAll('.row');
+  for (var i = 0; i < rows.length; i++){
+    var n = rows[i].querySelector('.nm').value.trim();
+    var u = rows[i].querySelector('.ur').value.trim();
+    if (n || u) out.push({ name: n, url: u });
+  }
+  return out;
+}
+
+function post(path, body, withKey){
+  var h = { 'Content-Type': 'application/json' };
+  if (withKey) h['x-admin-key'] = key;
+  return fetch(apiBase() + path, { method: 'POST', headers: h, body: JSON.stringify(body) })
+    .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(d){
+      if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status)); return d; }); });
+}
+
+function get(path){
+  return fetch(apiBase() + path, { headers: { 'x-admin-key': key } })
+    .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(d){
+      if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status)); return d; }); });
+}
+
+function openPanel(){
+  $('loginBox').classList.add('hidden');
+  $('panel').classList.remove('hidden');
+  load();
+}
+
+function load(){
+  say('', '读取中…');
+  get('/load').then(function(d){
+    $('rows').innerHTML = '';
+    (d.sites || []).forEach(function(s){ addRow(s.name, s.url); });
+    if (!(d.sites || []).length) addRow();
+    $('siteName').value = (d.meta && d.meta.name) || '';
+    $('siteCname').value = (d.meta && d.meta.cname) || '';
+    say('ok', '已读取 ' + (d.sites || []).length + ' 个站点');
+  }).catch(function(e){
+    say('bad', '读取失败：' + e.message);
+    if (/登录/.test(e.message)) logout();
+  });
+}
+
+function login(){
+  var pw = $('pass').value.trim();
+  if (!pw){ say('bad', '请输入口令', 'loginMsg'); return; }
+  if (!apiBase()){
+    $('setupBox').classList.remove('hidden');
+    say('bad', '还差后台接口地址，填一下再点一次', 'loginMsg');
+    return;
+  }
+  var typed = ($('apiUrl').value || '').trim().replace(/\/+$/, '');
+  if (typed) localStorage.setItem('wc_api', typed);
+
+  say('', '验证中…', 'loginMsg');
+  post('/login', { password: pw }, false).then(function(){
+    key = pw;
+    localStorage.setItem('wc_key', pw);
+    openPanel();
+  }).catch(function(e){
+    say('bad', '口令错误或地址不通：' + e.message, 'loginMsg');
+  });
+}
+
+function save(){
+  var sites = collect();
+  if (!sites.length){ say('bad', '至少保留一个站点'); return; }
+  for (var i = 0; i < sites.length; i++){
+    if (!sites[i].name || !sites[i].url){ say('bad', '第 ' + (i+1) + ' 行名称或地址为空'); return; }
+    if (!/^https?:\/\//.test(sites[i].url)){ say('bad', '第 ' + (i+1) + ' 行地址要以 http(s):// 开头'); return; }
+  }
+  var meta = { name: $('siteName').value.trim(), cname: $('siteCname').value.trim() };
+  say('', '提交中…');
+  post('/save', { sites: sites, meta: meta }, true).then(function(d){
+    say('ok', '已提交，commit ' + String(d.commit || '').slice(0, 7));
+  }).catch(function(e){
+    say('bad', '保存失败：' + e.message);
+  });
+}
+
+function logout(){
+  localStorage.removeItem('wc_key');
+  key = '';
+  $('panel').classList.add('hidden');
+  $('loginBox').classList.remove('hidden');
+  $('pass').value = '';
+  say('', '', 'loginMsg');
+}
+
+(function init(){
+  if (!CFG.api && !localStorage.getItem('wc_api')) $('setupBox').classList.remove('hidden');
+  var saved = localStorage.getItem('wc_key');
+  if (!saved || !apiBase()) return;
+  post('/login', { password: saved }, false).then(function(){
+    key = saved; openPanel();
+  }).catch(function(){ logout(); });
+})();
+</script>
+</body>
+</html>
