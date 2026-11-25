@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>故障单关闭</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:#f5f6f8;color:#1f2430;font-size:14px;padding:20px;
+font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+.box{width:100%;max-width:380px;background:#fff;border:1px solid #e6e9ef;border-radius:16px;
+padding:26px 20px;box-shadow:0 2px 8px rgba(16,24,40,.06);text-align:center}
+h1{font-size:17px;margin:0 0 6px;font-weight:600}
+.state{font-size:12.5px;color:#6f7684;line-height:1.9;margin:0 0 20px;min-height:20px}
+button{width:100%;border:0;border-radius:12px;padding:14px;font-size:16px;cursor:pointer;
+background:#e5484d;color:#fff;font-family:inherit;letter-spacing:2px}
+button:disabled{background:#c9ced8;cursor:default}
+button.plain{background:none;color:#98a2b3;font-size:11.5px;letter-spacing:0;padding:8px;margin-top:10px}
+.mask{position:fixed;inset:0;background:rgba(15,17,21,.45);display:flex;align-items:center;
+justify-content:center;padding:20px;z-index:9}
+.mask.hidden{display:none}
+.dlg{width:100%;max-width:320px;background:#fff;border-radius:16px;padding:20px;text-align:left}
+.dlg h2{font-size:15px;margin:0 0 14px;font-weight:600}
+.dlg label{display:block;font-size:12px;color:#6f7684;margin:10px 0 6px}
+.dlg input{width:100%;border:1px solid #dfe4ec;border-radius:10px;padding:11px 12px;font-size:15px;
+outline:none;font-family:inherit;color:#1f2430}
+.dlg input:focus{border-color:#2f6bff;box-shadow:0 0 0 3px rgba(47,107,255,.12)}
+.acts{display:flex;gap:8px;margin-top:16px}
+.acts button{font-size:14px;padding:11px;letter-spacing:0}
+.acts .cancel{background:#eceff4;color:#1f2430}
+.acts .ok{background:#2f6bff}
+.err{font-size:12px;color:#c33;margin-top:10px;min-height:16px}
+.hint{font-size:11px;color:#98a2b3;line-height:1.7;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>故障单</h1>
+  <p class="state" id="state">读取中…</p>
+  <button id="btn" onclick="open_()">关 闭</button>
+  <button class="plain hidden" id="clear" onclick="clearKey()">清除本机密钥</button>
+  <div class="hint">关闭只会把故障单标记为已关闭，不会删掉它。</div>
+</div>
+
+<div class="mask hidden" id="mask">
+  <div class="dlg">
+    <h2>确认关闭</h2>
+    <div id="keyWrap">
+      <label>维护密钥</label>
+      <input id="keyIn" type="password" placeholder="首次使用需填写" autocomplete="off">
+    </div>
+    <label>密码</label>
+    <input id="pwIn" type="password" placeholder="输入密码" autocomplete="off">
+    <div class="err" id="err"></div>
+    <div class="acts">
+      <button class="cancel" onclick="close_()">取消</button>
+      <button class="ok" onclick="submit()">确认</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var REPO = 'webcstx/signature';
+var PASS = '520214';
+var $ = function(i){ return document.getElementById(i); };
+var count = 0;
+
+function key(){ return localStorage.getItem('wc_fix_key') || ''; }
+
+function say(text){ $('state').textContent = text; }
+
+function load(){
+  fetch('https://api.github.com/repos/' + REPO + '/issues?state=open&per_page=100')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var list = (d || []).filter(function(x){
+        if (x.pull_request) return false;
+        var labels = (x.labels || []).map(function(l){ return l.name; });
+        return labels.indexOf('status') > -1;
+      });
+      count = list.length;
+      say(count ? '当前有 ' + count + ' 张未关闭的故障单' : '当前没有未关闭的故障单');
+      $('btn').disabled = !count;
+      $('clear').classList.toggle('hidden', !key());
+    })
+    .catch(function(){ say('读取失败，稍后重试'); });
+}
+
+function open_(){
+  $('err').textContent = '';
+  $('keyWrap').style.display = key() ? 'none' : 'block';
+  $('keyIn').value = '';
+  $('pwIn').value = '';
+  $('mask').classList.remove('hidden');
+  setTimeout(function(){ $('pwIn').focus(); }, 50);
+}
+
+function close_(){ $('mask').classList.add('hidden'); }
+
+function clearKey(){
+  localStorage.removeItem('wc_fix_key');
+  $('clear').classList.add('hidden');
+  $('err').textContent = '';
+}
+
+function submit(){
+  var pw = $('pwIn').value.trim();
+  var k = key() || $('keyIn').value.trim();
+  if (!k){ $('err').textContent = '需要先填维护密钥'; return; }
+  if (pw !== PASS){ $('err').textContent = '密码不对'; return; }
+  localStorage.setItem('wc_fix_key', k);
+  $('btn').disabled = true;
+  say('提交中…');
+
+  fetch('https://api.github.com/repos/' + REPO + '/issues?state=open&per_page=100', {
+    headers: { 'Authorization': 'Bearer ' + k, 'Accept': 'application/vnd.github+json' }
+  })
+    .then(function(r){
+      if (r.status === 401) throw new Error('密钥无效');
+      return r.json();
+    })
+    .then(function(d){
+      var list = (d || []).filter(function(x){
+        if (x.pull_request) return false;
+        var labels = (x.labels || []).map(function(l){ return l.name; });
+        return labels.indexOf('status') > -1;
+      });
+      if (!list.length) return 0;
+      return Promise.all(list.map(function(x){
+        return fetch('https://api.github.com/repos/' + REPO + '/issues/' + x.number, {
+          method: 'PATCH',
+          headers: { 'Authorization': 'Bearer ' + k, 'Accept': 'application/vnd.github+json',
+                     'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: 'closed', state_reason: 'not_planned' })
+        }).then(function(r){ return r.ok ? 1 : 0; });
+      })).then(function(a){ return a.reduce(function(p, c){ return p + c; }, 0); });
+    })
+    .then(function(n){
+      close_();
+      say(n ? '已关闭 ' + n + ' 张故障单' : '没有需要关闭的故障单');
+      $('clear').classList.toggle('hidden', !key());
+      load();
+    })
+    .catch(function(e){
+      $('btn').disabled = false;
+      $('err').textContent = e.message || '提交失败';
+    });
+}
+
+load();
+</script>
+</body>
+</html>
