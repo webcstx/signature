@@ -1,14 +1,11 @@
 name: Admin Panel Deploy
 
-# 管理页只放在 admin/ 目录，独立部署到 gh-pages 的 admin/ 子目录。
-# 站点每次重建会删掉它，所以这里监听 gh-pages 推送，发现缺失就立刻补回。
+# 管理页放在仓库 admin/ 目录，独立部署到 gh-pages 的 admin/ 子目录。
+# 站点每次重建会把它删掉，所以这里监听 gh-pages 推送：一缺失就自动补回。
 
 on:
   push:
     branches: [gh-pages]
-  push:
-    branches: [master]
-    paths: ["admin/**"]
   schedule:
     - cron: "0 */2 * * *"
   workflow_dispatch:
@@ -21,19 +18,17 @@ jobs:
     steps:
       - id: probe
         run: |
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "master" ]; then
+          if [ "${{ github.event_name }}" != "push" ]; then
             echo "need=yes" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" != "push" ]; then
-            echo "need=yes" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/admin/index.html?ref=gh-pages")
+          if [ "$code" = "200" ]; then
+            echo "need=no" >> $GITHUB_OUTPUT
           else
-            code=$(curl -s -o /dev/null -w "%{http_code}" \
-              -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
-              "https://api.github.com/repos/${{ github.repository }}/contents/admin/index.html?ref=gh-pages")
-            if [ "$code" = "200" ]; then
-              echo "need=no" >> $GITHUB_OUTPUT
-            else
-              echo "need=yes" >> $GITHUB_OUTPUT
-            fi
+            echo "need=yes" >> $GITHUB_OUTPUT
           fi
 
   deploy:
