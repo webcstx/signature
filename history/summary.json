@@ -1,20 +1,20 @@
 [
   {
-    "name": "aopaoxnzj.xuu8t6.cn",
+    "name": "泡泡清理机",
     "url": "https://paopaoxnzj.xuu8t6.cn",
     "icon": "https://icons.duckduckgo.com/ip3/paopaoxnzj.xuu8t6.cn.ico",
-    "slug": "aopaoxnzj-xuu8t6-cn",
+    "slug": "泡泡清理机",
     "status": "up",
     "uptime": "100.00%",
     "uptimeDay": "100.00%",
     "uptimeWeek": "100.00%",
     "uptimeMonth": "100.00%",
     "uptimeYear": "100.00%",
-    "time": 5761,
-    "timeDay": 5761,
-    "timeWeek": 5761,
-    "timeMonth": 5761,
-    "timeYear": 5761,
+    "time": 3302,
+    "timeDay": 3302,
+    "timeWeek": 3302,
+    "timeMonth": 3302,
+    "timeYear": 3302,
     "dailyMinutesDown": {}
   },
   {
@@ -28,11 +28,11 @@
     "uptimeWeek": "100.00%",
     "uptimeMonth": "100.00%",
     "uptimeYear": "100.00%",
-    "time": 2594,
-    "timeDay": 3180,
-    "timeWeek": 2704,
-    "timeMonth": 2594,
-    "timeYear": 2594,
+    "time": 2538,
+    "timeDay": 2521,
+    "timeWeek": 2634,
+    "timeMonth": 2538,
+    "timeYear": 2538,
     "dailyMinutesDown": {}
   },
   {
@@ -46,11 +46,11 @@
     "uptimeWeek": "100.00%",
     "uptimeMonth": "100.00%",
     "uptimeYear": "100.00%",
-    "time": 1964,
-    "timeDay": 1874,
-    "timeWeek": 1964,
-    "timeMonth": 1964,
-    "timeYear": 1964,
+    "time": 1895,
+    "timeDay": 1609,
+    "timeWeek": 1895,
+    "timeMonth": 1895,
+    "timeYear": 1895,
     "dailyMinutesDown": {}
   }
 ]
