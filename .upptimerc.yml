@@ -16,7 +16,7 @@ status-website:
   introTitle: "**网站安全监控** - 实时检查网站是否安全在线"
   introMessage: 基于 Upptime 的开源网站可用性监控系统
   navbar:
-    - title: Status
+    - title: 状态
       href: /
     - title: GitHub
       href: https://github.com/$OWNER/$REPO
